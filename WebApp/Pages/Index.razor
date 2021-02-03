@@ -37,8 +37,8 @@
             </div>
             <br />
             <div class="col-6 row">
-                <label class="col h3 font-weight-bold">Title</label>
-                <InputText class="form-control col-3" @bind-Value="messag.DeepLinkAction" placeholder="Title" />
+                <label class="col h3 font-weight-bold">DeepLinkAction</label>
+                <InputText class="form-control col-3" @bind-Value="messag.DeepLinkAction" placeholder="DeepLinkAction" />
             </div>
             <div class="col-6 row">
                 <span class="col-2"></span>
@@ -139,7 +139,7 @@
         httpRequestMessage.Method = new HttpMethod("POST");
         httpRequestMessage.RequestUri = new Uri("https://localhost:44383/api/Messages");
         messag.CreateDate = DateTime.Now.ToString();
-        var userID = await sessionStorage.GetItemAsync<string>("UserId");
+        var userID = await sessionStorage.GetItemAsync<string>("UserID");
         messag.CreateBy = int.Parse(userID);
 
         string serilized = JsonConvert.SerializeObject(messag);
@@ -154,7 +154,7 @@
         var responseStatusCode = response.StatusCode;
         var responsebody = await response.Content.ReadAsStringAsync();
 
-        if (responseStatusCode.ToString() == "OK")
+        if (responseStatusCode.ToString() == "Created")
         {            
             NavigationManager.NavigateTo("/index");
 
