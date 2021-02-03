@@ -1,0 +1,107 @@
+﻿@layout LoginLayout
+@page  "/"
+@using MainApi.Models
+@using WebApp.Models
+@using WebApp.Data
+@using System.Security.Claims
+@using Newtonsoft.Json
+@using System.Net.Http.Headers
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+@inject Blazored.SessionStorage.ISessionStorageService sessionStorage
+@inject HttpClient Http
+<center>
+    <EditForm Model="@user" OnValidSubmit="@ValidateUser">
+        <div>
+            <br /><br /><br /><br /><br />
+        </div>
+        <div>
+            <h3 style="font-weight:bold; color:purple">Test App Login</h3>
+        </div>
+        <div>
+            <br />
+        </div>
+        <div class="col-6 row">
+            <input class="form-control col-6" @bind="user.Email"  autocomplete="george.zanfir@gmail.com" placeholder="email address" />
+        </div>
+        <br />
+        <div class="col-6 row">
+            <input type="password" class="form-control col-6" @bind="user.Password" autocomplete="parola" placeholder="password" />
+        </div>
+        <br />
+        <div class="col-6 row">
+            <span class="col-6"></span>
+            <input type="submit" class="form-control col-6 btn btn-primary" value="Login" />
+            <a href="/signup" class="col-3">Sign up</a>
+        </div>
+        <br />
+        <div class="col-6 row" style="text-align:left; font-weight:bold">
+            <span class="col-6">@LoginMesssage</span>
+        </div>
+    </EditForm>
+</center>
+
+@code { private Users user;
+    public string LoginMesssage { get; set; }
+    ClaimsPrincipal claimsPrincipal;
+
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+    protected async override Task OnInitializedAsync()
+    {
+        user = new Users();
+
+        claimsPrincipal = (await authenticationStateTask).User;
+
+        if (claimsPrincipal.Identity.IsAuthenticated)
+        {
+            NavigationManager.NavigateTo("/index");
+        }
+
+
+    }
+
+    private async Task<bool> ValidateUser()
+    {
+        //assume that user is valid
+        //call an API
+        HttpRequestMessage httpRequestMessage = new HttpRequestMessage();
+
+        httpRequestMessage.Method = new HttpMethod("POST");
+        httpRequestMessage.RequestUri = new Uri("https://localhost:44383/api/Users/Login");
+        LoginDetails loginDetails = new LoginDetails();
+        loginDetails.Device = "Some"; //more logic here.....
+        loginDetails.Os = "Machine";
+        string serilized = JsonConvert.SerializeObject(loginDetails);
+        httpRequestMessage.Content = new StringContent(serilized);
+        httpRequestMessage.Headers.Authorization = new AuthenticationHeaderValue(
+        "Basic", Convert.ToBase64String(
+            System.Text.ASCIIEncoding.ASCII.GetBytes(
+               $"{user.Email}:{user.Password}")));
+
+        httpRequestMessage.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
+
+        var response = await Http.SendAsync(httpRequestMessage);
+        var responseStatusCode = response.StatusCode;
+        var responsebody = await response.Content.ReadAsStringAsync();
+
+        if (responseStatusCode.ToString() == "OK")
+        {
+            User returnedUser = JsonConvert.DeserializeObject<User>(responsebody);
+            await sessionStorage.SetItemAsync("email", returnedUser.Email);
+            await sessionStorage.SetItemAsync("AccessToken", returnedUser.AccessToken);
+            await sessionStorage.SetItemAsync("Level", returnedUser.Level.ToString());
+            await sessionStorage.SetItemAsync("UserID", returnedUser.Id.ToString());
+
+            ((CustomAuthenticationStateProvider)AuthenticationStateProvider).MarkUserAsAuthenticated(user.Email, user.Level);
+            NavigationManager.NavigateTo("/index");
+
+        }
+        else
+        {
+            LoginMesssage = "Invalid username or password!!11";
+        }
+
+        return await Task.FromResult(true);
+    } }

@@ -1,0 +1,12 @@
+<Router AppAssembly="@typeof(Program).Assembly" PreferExactMatches="@true">
+    <Found Context="routeData">
+        <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+    </Found>
+    <NotFound>
+        <CascadingAuthenticationState>
+            <h1>404 error</h1>
+            <p>nothing here amigo...</p>
+        </CascadingAuthenticationState>
+        
+    </NotFound>
+</Router>

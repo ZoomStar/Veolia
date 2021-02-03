@@ -1,0 +1,88 @@
+﻿@page  "/Users"
+@using WebApp.Data
+@using MainApi.Models
+@using WebApp.Models
+@using WebApp.Data
+@using System.Security.Claims
+@using Newtonsoft.Json
+@using System.Net.Http.Headers
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+@inject Blazored.SessionStorage.ISessionStorageService sessionStorage
+@inject HttpClient Http
+
+<h1>Users</h1>
+
+<p>Welcome to your new app.</p>
+
+<AuthorizeView>
+    <Authorized>
+
+        @if (users == null)
+        {
+            <p><em>Loading...</em></p>
+        }
+        else
+        {
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Email</th>
+                        <th>Level</th>
+                        <th>LastLogin</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var usr in users)
+                    {
+                        <tr>
+                            <td>@usr.Id</td>
+                            <td>@usr.Email</td>
+                            <td>@usr.Level</td>
+                            <td>@usr.LastLogin</td>
+                            <td></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <p>You are signed out!...sad right?</p>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private Users[] users;
+    string Token;
+    protected override async Task OnInitializedAsync()
+    {
+        HttpRequestMessage httpRequestMessage = new HttpRequestMessage();
+
+        httpRequestMessage.Method = new HttpMethod("GET");
+        httpRequestMessage.RequestUri = new Uri("https://localhost:44383/api/Users");
+        LoginDetails loginDetails = new LoginDetails();
+        Token = await sessionStorage.GetItemAsync<string>("AccessToken");
+        httpRequestMessage.Headers.Authorization = new AuthenticationHeaderValue(
+        "Bearer", Token);
+
+
+        var response = await Http.SendAsync(httpRequestMessage);
+        var responseStatusCode = response.StatusCode;
+        var responsebody = await response.Content.ReadAsStringAsync();
+
+        if (responseStatusCode.ToString() == "OK")
+        {
+            List<Users> usersList = JsonConvert.DeserializeObject<List<Users>>(responsebody);
+            users = usersList.ToArray();
+        }
+        else
+        {
+            //ERPRPRPPRPR
+        }
+
+
+    }
+}

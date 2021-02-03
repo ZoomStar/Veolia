@@ -1,0 +1,169 @@
+﻿@page  "/index" 
+@using WebApp.Data
+@using MainApi.Models
+@using WebApp.Models
+@using System.Security.Claims
+@using Newtonsoft.Json
+@using System.Net.Http.Headers
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+@inject Blazored.SessionStorage.ISessionStorageService sessionStorage
+@inject HttpClient Http
+
+<h1>Messages</h1>
+
+<p>Welcome to your new app.</p>
+
+    <h3><b>Enter a new message</b></h3>
+
+
+<AuthorizeView>
+    <Authorized Context="Auth">
+
+        <EditForm Model="@messag" OnValidSubmit="@SaveMessage">
+            <div class="col-6 row">
+                <label class="col h3 font-weight-bold">Title</label>
+                <InputText class="form-control col-3" @bind-Value="messag.Title" placeholder="Title" />
+            </div>
+            <br />
+            <div class="col-6 row">
+                <label class="col h3 font-weight-bold">Message</label>
+                <InputText class="form-control col-3" @bind-Value="messag.MessageBody" placeholder="Message" />
+            </div>
+            <br />
+            <div class="col-6 row">
+                <label class="col h3 font-weight-bold">ImportanceLevel</label>
+                <InputNumber class="form-control col-3" @bind-Value="messag.ImportanceLevel" placeholder="ImportanceLevel" />
+            </div>
+            <br />
+            <div class="col-6 row">
+                <label class="col h3 font-weight-bold">Title</label>
+                <InputText class="form-control col-3" @bind-Value="messag.DeepLinkAction" placeholder="Title" />
+            </div>
+            <div class="col-6 row">
+                <span class="col-2"></span>
+                <input type="submit" class="from-control col-1 btn btn-primary" value="Submit" />
+                <span>&nbsp;</span>
+                <input type="submit" class="from-control col-1 btn btn-primary" value="Clear" />
+            </div>
+        </EditForm>
+        @if (messages == null)
+        {
+            <p>Loading...</p>
+        }
+        else
+        {
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Title</th>
+                        <th>CreateDate</th>
+                        <th>MessageBody</th>
+                        <th>DeepLinkAction</th>
+                        <th>ImportanceLevel</th>
+                        <th>CreateByNavigation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var msg in messages)
+                    {
+                        <tr>
+                            <td>@msg.Id</td>
+                            <td>@msg.Title</td>
+                            <td>@msg.CreateDate</td>
+                            <td>@msg.MessageBody</td>
+                            <td>@msg.DeepLinkAction</td>
+                            <td>@msg.ImportanceLevel</td>
+                            <td>@msg.CreateByNavigation</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+        }
+    </Authorized>
+    <NotAuthorized>
+
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    public Messages messag { get; set; }
+    Messages[] messages;
+    string Token;
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        messag = new Messages()
+        {
+            Title = "",
+            MessageBody = "",
+            DeepLinkAction = "",
+
+
+        };
+
+
+        Token = await sessionStorage.GetItemAsync<string>("AccessToken");
+        HttpRequestMessage httpRequestMessage = new HttpRequestMessage();
+        httpRequestMessage.Method = new HttpMethod("GET");
+        httpRequestMessage.RequestUri = new Uri("https://localhost:44383/api/Messages");
+        LoginDetails loginDetails = new LoginDetails();
+
+        httpRequestMessage.Headers.Authorization = new AuthenticationHeaderValue(
+        "Bearer", Token);
+
+        var response = await Http.SendAsync(httpRequestMessage);
+        var responseStatusCode = response.StatusCode;
+        var responsebody = await response.Content.ReadAsStringAsync();
+
+        if (responseStatusCode.ToString() == "OK")
+        {
+            List<Messages> usersList = JsonConvert.DeserializeObject<List<Messages>>(responsebody);
+            messages = usersList.ToArray();
+        }
+        else
+        {
+            //ERPRPRPPRPR
+        }
+
+
+    }
+
+    private async Task<bool> SaveMessage()
+    {
+        HttpRequestMessage httpRequestMessage = new HttpRequestMessage();
+
+        httpRequestMessage.Method = new HttpMethod("POST");
+        httpRequestMessage.RequestUri = new Uri("https://localhost:44383/api/Messages");
+        messag.CreateDate = DateTime.Now.ToString();
+        var userID = await sessionStorage.GetItemAsync<string>("UserId");
+        messag.CreateBy = int.Parse(userID);
+
+        string serilized = JsonConvert.SerializeObject(messag);
+
+        httpRequestMessage.Content = new StringContent(serilized);
+        httpRequestMessage.Headers.Authorization = new AuthenticationHeaderValue(
+        "Bearer", Token);
+
+        httpRequestMessage.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
+
+        var response = await Http.SendAsync(httpRequestMessage);
+        var responseStatusCode = response.StatusCode;
+        var responsebody = await response.Content.ReadAsStringAsync();
+
+        if (responseStatusCode.ToString() == "OK")
+        {            
+            NavigationManager.NavigateTo("/index");
+
+        }
+        else
+        {
+           
+        }
+
+        return await Task.FromResult(true);
+    }
+}
